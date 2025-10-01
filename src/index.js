@@ -163,6 +163,56 @@ app.delete("/api/users/:id", async (req, res) => {
     }
 });
 
+// ROTA DE LOGIN
+app.post("/api/login", async (req, res) => {
+    try {
+      // 1. Pega email e senha do corpo da requisição
+      const { email, senha } = req.body;
+  
+      // 2. Validação básica
+      if (!email || !senha) {
+        return res.status(400).json({ error: "Email e senha são obrigatórios." });
+      }
+      
+      const emailLowerCase = email.toLowerCase();
+  
+      // 3. Procura o usuário no banco de dados pelo email
+      const [rows] = await db.query(
+        "SELECT * FROM usuarios WHERE email = ?",
+        [emailLowerCase]
+      );
+  
+      // 4. Se não encontrar o usuário, retorna erro 404
+      if (rows.length === 0) {
+        return res.status(404).json({ error: "Usuário não encontrado." });
+      }
+  
+      const user = rows[0];
+  
+      // 5. Compara a senha enviada com o hash salvo no banco
+      const isPasswordCorrect = await bcrypt.compare(senha, user.passwordHash);
+  
+      // 6. Se a senha estiver incorreta, retorna erro 401
+      if (!isPasswordCorrect) {
+        return res.status(401).json({ error: "Senha inválida." });
+      }
+  
+      // 7. Se tudo deu certo, retorna sucesso com os dados do usuário
+      res.status(200).json({
+        id: user.id,
+        nome: user.nome,
+        email: user.email,
+        role: user.role
+        // Se você tiver uma coluna 'role' ou 'cargo', pode retornar aqui também
+      });
+  
+    } catch (error) {
+      console.error("Erro no login:", error.message);
+      res.status(500).json({ error: "Erro interno no servidor." });
+    }
+  });
+
+
 
 // Iniciar o servidor
 app.listen(PORT, () => {
